@@ -50,7 +50,7 @@
         table { 
             width: 100%; 
             border-collapse: collapse; 
-            white-space: nowrap; /* Giữ nội dung không bị rớt dòng để dễ đọc hơn */
+            white-space: nowrap; 
         }
         th, td { 
             border: 1px solid #e1e4e8; 
@@ -108,10 +108,6 @@
                     <th>Thôn</th>
                     <th>Tên chủ sử dụng</th>
                     <th>Số GCN</th>
-                    <th>Số tờ - Số thửa</th>
-                    <th>Diện tích</th>
-                    <th>MDSD</th>
-                    <th>Số hiệu</th>
                 </tr>
             </thead>
             <tbody id="tableBody">
@@ -121,8 +117,7 @@
 </div>
 
 <script>
-    // Tên file của bạn. 
-    // Thêm chuỗi ?v= thời gian thực để chống lỗi cache của trình duyệt khi cập nhật file Excel.
+    // Ép trình duyệt luôn tải file mới nhất
     const fileName = "DLdatdai.xlsx?v=" + new Date().getTime();
 
     fetch(fileName)
@@ -132,11 +127,10 @@
         })
         .then(data => {
             const workbook = XLSX.read(data, {type: 'array'});
-            // Đọc sheet đầu tiên
             const firstSheetName = workbook.SheetNames[0];
             const worksheet = workbook.Sheets[firstSheetName];
             
-            // Đọc theo tọa độ cột A-N. Bắt đầu từ dòng thứ 2 (bỏ qua dòng 1 là tiêu đề)
+            // Đọc từ dòng 2 (bỏ dòng 1 là tiêu đề)
             const jsonData = XLSX.utils.sheet_to_json(worksheet, {header: "A", range: 1, defval: ""});
             
             populateTable(jsonData);
@@ -144,7 +138,6 @@
             document.getElementById('loading').style.display = 'none';
             document.getElementById('dataTable').style.display = 'table';
             
-            // Hiển thị tổng số bản ghi
             const countDiv = document.getElementById('dataCount');
             countDiv.style.display = 'block';
             countDiv.innerText = `Tổng số thửa đất: ${jsonData.length}`;
@@ -157,15 +150,22 @@
         const tbody = document.getElementById('tableBody');
         
         data.forEach(row => {
-            // Kiểm tra xem dòng có tên chủ sử dụng hoặc số thửa không để bỏ qua dòng trắng cuối file
+            // Kiểm tra dòng có Tên chủ sử dụng (Cột I) hoặc số thửa (Cột B) thì mới in ra
             if (row["I"] || row["B"]) {
                 const tr = document.createElement('tr');
                 
-                // Trích xuất 14 trường thông tin từ A đến N
+                // Trích xuất ĐÚNG 10 trường thông tin (Từ cột A đến cột J)
                 const cols = [
-                    row["A"], row["B"], row["C"], row["D"], row["E"], 
-                    row["F"], row["G"], row["H"], row["I"], row["J"], 
-                    row["K"], row["L"], row["M"], row["N"]
+                    row["A"], // Số tờ 2 cấp
+                    row["B"], // Số thửa 2 cấp
+                    row["C"], // Số tờ cũ
+                    row["D"], // Số thửa cũ
+                    row["E"], // Loại đất bản đồ
+                    row["F"], // Diện tích bản đồ
+                    row["G"], // Diện tích cấp giấy
+                    row["H"], // Thôn
+                    row["I"], // Tên chủ sử dụng
+                    row["J"]  // Số GCN
                 ];
                 
                 cols.forEach(text => {
@@ -189,7 +189,6 @@
         for (let i = 1; i < tr.length; i++) {
             let visible = false;
             const tds = tr[i].getElementsByTagName("td");
-            // Duyệt qua tất cả các cột để tìm
             for (let j = 0; j < tds.length; j++) {
                 if (tds[j]) {
                     const txtValue = tds[j].textContent || tds[j].innerText;
@@ -207,7 +206,6 @@
             }
         }
         
-        // Cập nhật lại số lượng kết quả tìm thấy
         document.getElementById('dataCount').innerText = `Kết quả: ${visibleCount} thửa đất`;
     }
 </script>
