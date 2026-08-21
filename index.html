@@ -29,12 +29,12 @@
         }
         input[type="text"] { 
             width: 100%; 
-            padding: 14px; 
+            padding: 12px; 
             margin-bottom: 20px; 
             border: 1px solid #ccd0d5; 
             border-radius: 6px; 
             box-sizing: border-box; 
-            font-size: 16px;
+            font-size: 15px;
             transition: border-color 0.3s;
         }
         input[type="text"]:focus {
@@ -50,13 +50,15 @@
         table { 
             width: 100%; 
             border-collapse: collapse; 
-            white-space: nowrap; 
+            /* Cho phép rớt dòng ở những ô văn bản dài, giúp co bảng lại gọn hơn */
+            white-space: normal; 
         }
         th, td { 
             border: 1px solid #e1e4e8; 
-            padding: 10px 12px; 
+            /* Thu nhỏ khoảng cách padding để co các cột lại */
+            padding: 8px 10px; 
             text-align: left; 
-            font-size: 14px;
+            font-size: 13px;
         }
         th { 
             background-color: #34495e; 
@@ -65,7 +67,12 @@
             top: 0; 
             z-index: 1;
             font-weight: 600;
+            white-space: nowrap; /* Giữ tiêu đề cột trên 1 dòng */
         }
+        /* Cố định độ rộng tối đa cho một số cột để không bị quá to */
+        th:nth-child(8), td:nth-child(8) { max-width: 150px; } /* Cột Địa chỉ */
+        th:nth-child(9), td:nth-child(9) { max-width: 180px; } /* Cột Tên chủ sử dụng */
+        
         tr:nth-child(even) { background-color: #f8f9fa; }
         tr:hover { background-color: #e8f4f8; }
         .loading { 
@@ -73,7 +80,7 @@
             font-style: italic; 
             color: #7f8c8d; 
             padding: 30px;
-            font-size: 16px;
+            font-size: 15px;
         }
         .data-count {
             text-align: right;
@@ -88,7 +95,7 @@
 
 <div class="container">
     <h2>Hệ Thống Tra Cứu Dữ Liệu Đất Đai</h2>
-    <input type="text" id="searchInput" placeholder="Nhập tên chủ sử dụng, số thửa, số tờ, hoặc số GCN để tìm kiếm..." onkeyup="searchTable()">
+    <input type="text" id="searchInput" placeholder="Nhập tên chủ sử dụng, số thửa, số tờ, địa chỉ hoặc số GCN để tìm kiếm..." onkeyup="searchTable()">
     
     <div id="loading" class="loading">Đang tự động tải và xử lý dữ liệu đất đai, vui lòng đợi...</div>
     
@@ -105,7 +112,7 @@
                     <th>Loại đất bản đồ</th>
                     <th>Diện tích bản đồ</th>
                     <th>Diện tích cấp giấy</th>
-                    <th>Thôn</th>
+                    <th>Địa chỉ</th>
                     <th>Tên chủ sử dụng</th>
                     <th>Số GCN</th>
                 </tr>
@@ -117,7 +124,6 @@
 </div>
 
 <script>
-    // Ép trình duyệt luôn tải file mới nhất
     const fileName = "DLdatdai.xlsx?v=" + new Date().getTime();
 
     fetch(fileName)
@@ -130,7 +136,6 @@
             const firstSheetName = workbook.SheetNames[0];
             const worksheet = workbook.Sheets[firstSheetName];
             
-            // Đọc từ dòng 2 (bỏ dòng 1 là tiêu đề)
             const jsonData = XLSX.utils.sheet_to_json(worksheet, {header: "A", range: 1, defval: ""});
             
             populateTable(jsonData);
@@ -150,11 +155,9 @@
         const tbody = document.getElementById('tableBody');
         
         data.forEach(row => {
-            // Kiểm tra dòng có Tên chủ sử dụng (Cột I) hoặc số thửa (Cột B) thì mới in ra
             if (row["I"] || row["B"]) {
                 const tr = document.createElement('tr');
                 
-                // Trích xuất ĐÚNG 10 trường thông tin (Từ cột A đến cột J)
                 const cols = [
                     row["A"], // Số tờ 2 cấp
                     row["B"], // Số thửa 2 cấp
@@ -163,7 +166,7 @@
                     row["E"], // Loại đất bản đồ
                     row["F"], // Diện tích bản đồ
                     row["G"], // Diện tích cấp giấy
-                    row["H"], // Thôn
+                    row["H"], // Địa chỉ (cột Thôn trong Excel)
                     row["I"], // Tên chủ sử dụng
                     row["J"]  // Số GCN
                 ];
