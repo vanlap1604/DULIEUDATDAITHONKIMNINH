@@ -1,0 +1,216 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Tra Cứu Dữ Liệu Đất Đai</title>
+    <!-- Thư viện SheetJS -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <style>
+        body { 
+            font-family: Arial, sans-serif; 
+            margin: 0; 
+            padding: 20px; 
+            background-color: #f0f2f5; 
+        }
+        h2 { 
+            text-align: center; 
+            color: #2c3e50; 
+            margin-bottom: 20px;
+        }
+        .container { 
+            width: 98%; 
+            margin: auto; 
+            background: white; 
+            padding: 20px; 
+            border-radius: 8px; 
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1); 
+            box-sizing: border-box;
+        }
+        input[type="text"] { 
+            width: 100%; 
+            padding: 14px; 
+            margin-bottom: 20px; 
+            border: 1px solid #ccd0d5; 
+            border-radius: 6px; 
+            box-sizing: border-box; 
+            font-size: 16px;
+            transition: border-color 0.3s;
+        }
+        input[type="text"]:focus {
+            outline: none;
+            border-color: #007bff;
+        }
+        .table-container {
+            overflow-x: auto;
+            max-height: 75vh;
+            border: 1px solid #e1e4e8;
+            border-radius: 4px;
+        }
+        table { 
+            width: 100%; 
+            border-collapse: collapse; 
+            white-space: nowrap; /* Giữ nội dung không bị rớt dòng để dễ đọc hơn */
+        }
+        th, td { 
+            border: 1px solid #e1e4e8; 
+            padding: 10px 12px; 
+            text-align: left; 
+            font-size: 14px;
+        }
+        th { 
+            background-color: #34495e; 
+            color: white; 
+            position: sticky; 
+            top: 0; 
+            z-index: 1;
+            font-weight: 600;
+        }
+        tr:nth-child(even) { background-color: #f8f9fa; }
+        tr:hover { background-color: #e8f4f8; }
+        .loading { 
+            text-align: center; 
+            font-style: italic; 
+            color: #7f8c8d; 
+            padding: 30px;
+            font-size: 16px;
+        }
+        .data-count {
+            text-align: right;
+            font-size: 13px;
+            color: #7f8c8d;
+            margin-bottom: 10px;
+            font-weight: bold;
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h2>Hệ Thống Tra Cứu Dữ Liệu Đất Đai</h2>
+    <input type="text" id="searchInput" placeholder="Nhập tên chủ sử dụng, số thửa, số tờ, hoặc số GCN để tìm kiếm..." onkeyup="searchTable()">
+    
+    <div id="loading" class="loading">Đang tự động tải và xử lý dữ liệu đất đai, vui lòng đợi...</div>
+    
+    <div id="dataCount" class="data-count" style="display:none;"></div>
+
+    <div class="table-container">
+        <table id="dataTable" style="display:none;">
+            <thead>
+                <tr>
+                    <th>Số tờ 2 cấp</th>
+                    <th>Số thửa 2 cấp</th>
+                    <th>Số tờ cũ</th>
+                    <th>Số thửa cũ</th>
+                    <th>Loại đất bản đồ</th>
+                    <th>Diện tích bản đồ</th>
+                    <th>Diện tích cấp giấy</th>
+                    <th>Thôn</th>
+                    <th>Tên chủ sử dụng</th>
+                    <th>Số GCN</th>
+                    <th>Số tờ - Số thửa</th>
+                    <th>Diện tích</th>
+                    <th>MDSD</th>
+                    <th>Số hiệu</th>
+                </tr>
+            </thead>
+            <tbody id="tableBody">
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<script>
+    // Tên file của bạn. 
+    // Thêm chuỗi ?v= thời gian thực để chống lỗi cache của trình duyệt khi cập nhật file Excel.
+    const fileName = "DLdatdai.xlsx?v=" + new Date().getTime();
+
+    fetch(fileName)
+        .then(response => {
+            if (!response.ok) throw new Error("Không tìm thấy file Excel dữ liệu đất đai.");
+            return response.arrayBuffer();
+        })
+        .then(data => {
+            const workbook = XLSX.read(data, {type: 'array'});
+            // Đọc sheet đầu tiên
+            const firstSheetName = workbook.SheetNames[0];
+            const worksheet = workbook.Sheets[firstSheetName];
+            
+            // Đọc theo tọa độ cột A-N. Bắt đầu từ dòng thứ 2 (bỏ qua dòng 1 là tiêu đề)
+            const jsonData = XLSX.utils.sheet_to_json(worksheet, {header: "A", range: 1, defval: ""});
+            
+            populateTable(jsonData);
+            
+            document.getElementById('loading').style.display = 'none';
+            document.getElementById('dataTable').style.display = 'table';
+            
+            // Hiển thị tổng số bản ghi
+            const countDiv = document.getElementById('dataCount');
+            countDiv.style.display = 'block';
+            countDiv.innerText = `Tổng số thửa đất: ${jsonData.length}`;
+        })
+        .catch(error => {
+            document.getElementById('loading').innerHTML = `<span style="color:#e74c3c;">Lỗi: ${error.message} <br>Hãy đảm bảo file <b>DLdatdai.xlsx</b> đã được tải lên cùng thư mục.</span>`;
+        });
+
+    function populateTable(data) {
+        const tbody = document.getElementById('tableBody');
+        
+        data.forEach(row => {
+            // Kiểm tra xem dòng có tên chủ sử dụng hoặc số thửa không để bỏ qua dòng trắng cuối file
+            if (row["I"] || row["B"]) {
+                const tr = document.createElement('tr');
+                
+                // Trích xuất 14 trường thông tin từ A đến N
+                const cols = [
+                    row["A"], row["B"], row["C"], row["D"], row["E"], 
+                    row["F"], row["G"], row["H"], row["I"], row["J"], 
+                    row["K"], row["L"], row["M"], row["N"]
+                ];
+                
+                cols.forEach(text => {
+                    const td = document.createElement('td');
+                    td.innerText = (text !== undefined && text !== null) ? text : "";
+                    tr.appendChild(td);
+                });
+
+                tbody.appendChild(tr);
+            }
+        });
+    }
+
+    function searchTable() {
+        const input = document.getElementById("searchInput");
+        const filter = input.value.toUpperCase();
+        const table = document.getElementById("dataTable");
+        const tr = table.getElementsByTagName("tr");
+        let visibleCount = 0;
+
+        for (let i = 1; i < tr.length; i++) {
+            let visible = false;
+            const tds = tr[i].getElementsByTagName("td");
+            // Duyệt qua tất cả các cột để tìm
+            for (let j = 0; j < tds.length; j++) {
+                if (tds[j]) {
+                    const txtValue = tds[j].textContent || tds[j].innerText;
+                    if (txtValue.toUpperCase().indexOf(filter) > -1) {
+                        visible = true;
+                        break;
+                    }
+                }
+            }
+            if (visible) {
+                tr[i].style.display = "";
+                visibleCount++;
+            } else {
+                tr[i].style.display = "none";
+            }
+        }
+        
+        // Cập nhật lại số lượng kết quả tìm thấy
+        document.getElementById('dataCount').innerText = `Kết quả: ${visibleCount} thửa đất`;
+    }
+</script>
+
+</body>
+</html>
